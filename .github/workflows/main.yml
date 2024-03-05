@@ -1,0 +1,64 @@
+name: Static Website CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+
+    # You can replace this step with any necessary build steps for your static files
+    - name: Build Static Files
+      run: |
+        # Replace these commands with your build process for HTML, CSS, and JavaScript
+        # For example:
+        # - npm install (if using any build tools)
+        # - npm run build (or any other build command)
+        # This assumes your HTML, CSS, and JS files are in the root directory of the repository
+
+    - name: Upload artifact for deployment job
+      uses: actions/upload-artifact@v2
+      with:
+        name: website
+        path: build 
+        # Upload the entire repository contents as artifacts
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Download artifact from build job 
+        uses: actions/download-artifact@v2
+        with:
+          name: website
+
+      - name: Copy To Server
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.REMOTE_SERVER }}
+          username: ${{ secrets.REMOTE_USER }}
+          password: ${{ secrets.USER_PASSWORD }}
+          source: "."
+          target: /var/www/testniraj.trayistats/test04-03-2024${{ github.run_id }}
+
+      - name: Run Scripts on server
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.REMOTE_SERVER }}
+          username: ${{ secrets.REMOTE_USER }}
+          password: ${{ secrets.USER_PASSWORD }}
+          script: |
+            echo ${{ github.run_number }} 
+            mkdir -p /var/www/testniraj.trayistats/test04-03-2024${{ github.run_number }}.${{ github.run_attempt }}
+            mv -f /var/www/testniraj.trayistats/test04-03-2024/. /var/www/testniraj.trayistats/test04-03-2024${{ github.run_number }}.${{ github.run_attempt }}/
+            cp -a /var/www/testniraj.trayistats/test04-03-2024${{ github.run_id }}/. /var/www/testniraj.trayistats/test04-03-2024/
+            cp -R /var/www/common/.htaccess /var/www/testniraj.trayistats/test04-03-2024/
+            sudo service apache2 restart
+            rm -r /var/www/testniraj.trayistats/test04-03-2024${{ github.run_id }}
