@@ -1,4 +1,4 @@
-name: Static Website CI/CD
+name: softify
 
 on:
   push:
